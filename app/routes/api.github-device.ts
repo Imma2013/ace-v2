@@ -7,12 +7,15 @@ const GITHUB_API_URL = 'https://api.github.com';
 const GITHUB_DEVICE_GRANT_TYPE = 'urn:ietf:params:oauth:grant-type:device_code';
 const GITHUB_DEVICE_SCOPE = 'repo read:user read:org workflow';
 
+// Dynamic access prevents Vite/nodePolyfills from statically replacing process.env at build time
+const _env = (globalThis as any).process?.env ?? {};
+
 function getGitHubClientId(context: any) {
   return (
     context?.cloudflare?.env?.GITHUB_CLIENT_ID ||
     context?.cloudflare?.env?.VITE_GITHUB_CLIENT_ID ||
-    process.env.GITHUB_CLIENT_ID ||
-    process.env.VITE_GITHUB_CLIENT_ID
+    _env['GITHUB_CLIENT_ID'] ||
+    _env['VITE_GITHUB_CLIENT_ID']
   );
 }
 

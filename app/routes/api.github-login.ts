@@ -4,12 +4,15 @@ import type { LoaderFunctionArgs } from '@remix-run/cloudflare';
 const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_OAUTH_SCOPE = 'repo read:user read:org';
 
+// Dynamic access prevents Vite/nodePolyfills from statically replacing process.env at build time
+const _env = (globalThis as any).process?.env ?? {};
+
 function getGitHubClientId(context: any) {
   return (
     context?.cloudflare?.env?.GITHUB_CLIENT_ID ||
     context?.cloudflare?.env?.VITE_GITHUB_CLIENT_ID ||
-    process.env.GITHUB_CLIENT_ID ||
-    process.env.VITE_GITHUB_CLIENT_ID
+    _env['GITHUB_CLIENT_ID'] ||
+    _env['VITE_GITHUB_CLIENT_ID']
   );
 }
 
