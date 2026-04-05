@@ -3,12 +3,15 @@ import { getApiKeysFromCookie } from '~/lib/api/cookies';
 
 const VERCEL_GOOGLE_FALLBACK_KEY = 'AIzaSyDRG2KBf76iPGYn4ESP8wm5D0JjQSovUPc';
 
+// Dynamic access prevents Vite/nodePolyfills from statically replacing process.env at build time
+const _env = (globalThis as any).process?.env ?? {};
+
 export const loader: LoaderFunction = async ({ context, request }) => {
   try {
     const url = new URL(request.url);
     const provider = url.searchParams.get('provider');
     const isHostedVercel =
-      (typeof process !== 'undefined' && !!(process.env.VERCEL || process.env.VERCEL_URL)) ||
+      !!(_env.VERCEL || _env.VERCEL_URL) ||
       request.headers.has('x-vercel-id') ||
       url.hostname.endsWith('.vercel.app') ||
       url.hostname === 'vercel.app';
@@ -32,7 +35,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
       return Response.json({
         isSet: !!(
           apiKeys?.[provider] ||
-          process.env[envVarName]?.trim() ||
+          _env[envVarName]?.trim() ||
           (provider === 'Google' ? VERCEL_GOOGLE_FALLBACK_KEY : undefined)
         ),
       });
@@ -51,7 +54,7 @@ export const loader: LoaderFunction = async ({ context, request }) => {
     const cookieHeader = request.headers.get('Cookie');
     const apiKeys = getApiKeysFromCookie(cookieHeader);
 
-    const isSet = !!(apiKeys?.[provider] || runtimeEnv[envVarName] || process.env[envVarName] || llmManager.env[envVarName]);
+    const isSet = !!(apiKeys?.[provider] || runtimeEnv[envVarName] || _env[envVarName] || llmManager.env[envVarName]);
 
     return Response.json({ isSet });
   } catch (error) {

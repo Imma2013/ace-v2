@@ -11,6 +11,9 @@ import { createScopedLogger } from '~/utils/logger';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
 const VERCEL_GOOGLE_FALLBACK_KEY = 'AIzaSyDRG2KBf76iPGYn4ESP8wm5D0JjQSovUPc';
+
+// Dynamic access prevents Vite/nodePolyfills from statically replacing process.env at build time
+const _env = (globalThis as any).process?.env ?? {};
 const VERCEL_GOOGLE_MODEL_ALIASES: Record<string, string> = {
   'gemini-3.1-pro-preview': 'gemini-2.5-pro',
   'gemini-3-flash-preview': 'gemini-2.5-flash',
@@ -103,12 +106,12 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   const apiKeys = getApiKeysFromCookie(cookieHeader);
   const providerSettings = getProviderSettingsFromCookie(cookieHeader);
   const isHostedVercel =
-    (typeof process !== 'undefined' && !!(process.env.VERCEL || process.env.VERCEL_URL)) ||
+    !!(_env.VERCEL || _env.VERCEL_URL) ||
     request.headers.has('x-vercel-id') ||
     requestUrl.hostname.endsWith('.vercel.app') ||
     requestUrl.hostname === 'vercel.app';
   const hostedGoogleApiKey =
-    apiKeys?.Google || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() || VERCEL_GOOGLE_FALLBACK_KEY;
+    apiKeys?.Google || _env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() || VERCEL_GOOGLE_FALLBACK_KEY;
 
   if (isHostedVercel && providerName === 'Google' && hostedGoogleApiKey) {
     try {

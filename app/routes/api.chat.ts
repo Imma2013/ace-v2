@@ -11,6 +11,9 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { discussPrompt } from '~/lib/common/prompts/discuss-prompt';
 
 const VERCEL_GOOGLE_FALLBACK_KEY = 'AIzaSyDRG2KBf76iPGYn4ESP8wm5D0JjQSovUPc';
+
+// Dynamic access prevents Vite/nodePolyfills from statically replacing process.env at build time
+const _env = (globalThis as any).process?.env ?? {};
 const MODEL_REGEX = /^\[Model: (.*?)\]\n\n/;
 const PROVIDER_REGEX = /\[Provider: (.*?)\]\n\n/;
 const VERCEL_GOOGLE_MODEL_ALIASES: Record<string, string> = {
@@ -84,18 +87,15 @@ function extractMessageProperties(message: Omit<Message, 'id'>): {
 async function chatAction({ context, request }: ActionFunctionArgs) {
   const requestUrl = new URL(request.url);
   const isHostedVercel =
-    (typeof process !== 'undefined' && !!(process.env.VERCEL || process.env.VERCEL_URL)) ||
+    !!(_env.VERCEL || _env.VERCEL_URL) ||
     request.headers.has('x-vercel-id') ||
     requestUrl.hostname.endsWith('.vercel.app') ||
     requestUrl.hostname === 'vercel.app';
-  const runtimeEnv =
-    typeof process !== 'undefined'
-      ? ({
-          GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim(),
-          OPENAI_API_KEY: process.env.OPENAI_API_KEY?.trim(),
-          ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY?.trim(),
-        } as Record<string, string | undefined>)
-      : {};
+  const runtimeEnv = {
+    GOOGLE_GENERATIVE_AI_API_KEY: _env.GOOGLE_GENERATIVE_AI_API_KEY?.trim(),
+    OPENAI_API_KEY: _env.OPENAI_API_KEY?.trim(),
+    ANTHROPIC_API_KEY: _env.ANTHROPIC_API_KEY?.trim(),
+  } as Record<string, string | undefined>;
 
   const { messages, files, apiKeys: requestApiKeys, promptId, contextOptimization, supabase, chatMode, designScheme, maxLLMSteps } =
     await request.json<{
