@@ -46,3 +46,7 @@ docs/instructions/Roadmap.md
 .cursorrules
 *.md
 .qodo
+-e 
+# Environment files
+*.env
+*.env.*
