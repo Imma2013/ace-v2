@@ -36,7 +36,6 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
   const [isEditing, setIsEditing] = useState(false);
   const [tempKey, setTempKey] = useState(apiKey);
   const [isEnvKeySet, setIsEnvKeySet] = useState(false);
-  const isHostedVercel = typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app');
 
   // Reset states and load saved key when provider changes
   useEffect(() => {
@@ -50,11 +49,6 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
   }, [provider.name]);
 
   const checkEnvApiKey = useCallback(async () => {
-    if (isHostedVercel) {
-      setIsEnvKeySet(false);
-      return;
-    }
-
     // Check cache first
     if (providerEnvKeyStatusCache[provider.name] !== undefined) {
       setIsEnvKeySet(providerEnvKeyStatusCache[provider.name]);
@@ -73,7 +67,7 @@ export const APIKeyManager: React.FC<APIKeyManagerProps> = ({ provider, apiKey, 
       console.error('Failed to check environment API key:', error);
       setIsEnvKeySet(false);
     }
-  }, [isHostedVercel, provider.name]);
+  }, [provider.name]);
 
   useEffect(() => {
     checkEnvApiKey();
