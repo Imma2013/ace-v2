@@ -1,8 +1,3 @@
-import type { LoaderFunction } from '@remix-run/cloudflare';
-import { json } from '@remix-run/cloudflare';
-import { LLMManager } from '~/lib/modules/llm/manager';
-import { LOCAL_PROVIDERS } from '~/lib/stores/settings';
-
 interface ConfiguredProvider {
   name: string;
   isConfigured: boolean;
@@ -13,12 +8,25 @@ interface ConfiguredProvidersResponse {
   providers: ConfiguredProvider[];
 }
 
+const LOCAL_PROVIDERS = ['OpenAILike', 'LMStudio', 'Ollama'] as const;
+
 /**
  * API endpoint that detects which providers are configured via environment variables
  * This helps auto-enable providers that have been set up by the user
  */
-export const loader: LoaderFunction = async ({ context }) => {
+export async function loader({ context }: { context: any }) {
   try {
+    if (process.env.VERCEL) {
+      return Response.json({
+        providers: LOCAL_PROVIDERS.map((name) => ({
+          name,
+          isConfigured: false,
+          configMethod: 'none' as const,
+        })),
+      } satisfies ConfiguredProvidersResponse);
+    }
+
+    const { LLMManager } = await import('~/lib/modules/llm/manager');
     const llmManager = LLMManager.getInstance(context?.cloudflare?.env as any);
     const configuredProviders: ConfiguredProvider[] = [];
 
@@ -92,19 +100,21 @@ export const loader: LoaderFunction = async ({ context }) => {
       });
     }
 
-    return json<ConfiguredProvidersResponse>({
+    return Response.json({
       providers: configuredProviders,
-    });
+    } satisfies ConfiguredProvidersResponse);
   } catch (error) {
     console.error('Error detecting configured providers:', error);
 
     // Return default state on error
-    return json<ConfiguredProvidersResponse>({
+    return Response.json({
       providers: LOCAL_PROVIDERS.map((name) => ({
         name,
         isConfigured: false,
         configMethod: 'none' as const,
       })),
-    });
+    } satisfies ConfiguredProvidersResponse);
   }
-};
+}
+
+

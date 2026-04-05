@@ -10,6 +10,7 @@ const initialConnection: GitHubConnection = storedConnection
       user: null,
       token: '',
       tokenType: 'classic',
+      authMethod: 'token',
     };
 
 export const githubConnection = atom<GitHubConnection>(initialConnection);
@@ -46,6 +47,7 @@ export async function initializeGitHubConnection() {
       user: userData as any,
       token: '', // Token stored server-side only
       tokenType: 'classic',
+      authMethod: 'server',
     };
 
     // Store in localStorage for persistence

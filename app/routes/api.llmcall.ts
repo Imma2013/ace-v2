@@ -8,6 +8,14 @@ import { LLMManager } from '~/lib/modules/llm/manager';
 import type { ModelInfo } from '~/lib/modules/llm/types';
 import { getApiKeysFromCookie, getProviderSettingsFromCookie } from '~/lib/api/cookies';
 import { createScopedLogger } from '~/utils/logger';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+
+const VERCEL_GOOGLE_FALLBACK_KEY = 'AIzaSyDRG2KBf76iPGYn4ESP8wm5D0JjQSovUPc';
+const VERCEL_GOOGLE_MODEL_ALIASES: Record<string, string> = {
+  'gemini-3.1-pro-preview': 'gemini-2.5-pro',
+  'gemini-3-flash-preview': 'gemini-2.5-flash',
+  'gemini-flash-latest': 'gemini-2.5-flash',
+};
 
 export async function action(args: ActionFunctionArgs) {
   return llmCallAction(args);
@@ -65,6 +73,7 @@ function validateTokenLimits(modelDetails: ModelInfo, requestedTokens: number): 
 }
 
 async function llmCallAction({ context, request }: ActionFunctionArgs) {
+  const requestUrl = new URL(request.url);
   const { system, message, model, provider, streamOutput } = await request.json<{
     system: string;
     message: string;
@@ -93,6 +102,54 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
   const cookieHeader = request.headers.get('Cookie');
   const apiKeys = getApiKeysFromCookie(cookieHeader);
   const providerSettings = getProviderSettingsFromCookie(cookieHeader);
+  const isHostedVercel =
+    (typeof process !== 'undefined' && !!(process.env.VERCEL || process.env.VERCEL_URL)) ||
+    request.headers.has('x-vercel-id') ||
+    requestUrl.hostname.endsWith('.vercel.app') ||
+    requestUrl.hostname === 'vercel.app';
+  const hostedGoogleApiKey =
+    apiKeys?.Google || process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() || VERCEL_GOOGLE_FALLBACK_KEY;
+
+  if (isHostedVercel && providerName === 'Google' && hostedGoogleApiKey) {
+    try {
+      const google = createGoogleGenerativeAI({
+        apiKey: hostedGoogleApiKey.trim(),
+      });
+      const result = await generateText({
+        system,
+        messages: [
+          {
+            role: 'user',
+            content: `${message}`,
+          },
+        ],
+        model: google(VERCEL_GOOGLE_MODEL_ALIASES[model] || model),
+        maxTokens: 4096,
+        temperature: 0,
+      });
+
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (error: unknown) {
+      const errorResponse = {
+        error: true,
+        message: error instanceof Error ? error.message : 'An unexpected error occurred',
+        statusCode: 500,
+        isRetryable: false,
+        provider: providerName,
+      };
+
+      return new Response(JSON.stringify(errorResponse), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+        statusText: 'Error',
+      });
+    }
+  }
 
   if (streamOutput) {
     try {
@@ -296,3 +353,5 @@ async function llmCallAction({ context, request }: ActionFunctionArgs) {
     }
   }
 }
+
+

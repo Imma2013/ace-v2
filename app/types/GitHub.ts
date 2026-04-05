@@ -140,12 +140,28 @@ export interface GitHubStats {
   }>;
 }
 
+export type GitHubTokenType = 'classic' | 'fine-grained' | 'oauth';
+export type GitHubAuthMethod = 'token' | 'device' | 'server';
+
 export interface GitHubConnection {
   user: GitHubUserResponse | null;
   token: string;
-  tokenType: 'classic' | 'fine-grained';
+  tokenType: GitHubTokenType;
+  authMethod?: GitHubAuthMethod;
   stats?: GitHubStats;
   rateLimit?: GitHubRateLimits;
+}
+
+export interface GitHubDeviceFlow {
+  status: 'pending' | 'success' | 'error';
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  verificationUriComplete?: string;
+  interval: number;
+  expiresAt: number;
+  message?: string;
+  error?: string;
 }
 
 export interface GitHubTokenInfo {

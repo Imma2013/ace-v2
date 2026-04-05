@@ -5,11 +5,12 @@ import type {
   GitHubOrganization,
   GitHubStats,
   GitHubLanguageStats,
+  GitHubTokenType,
 } from '~/types/GitHub';
 
 export interface GitHubApiServiceConfig {
   token?: string;
-  tokenType?: 'classic' | 'fine-grained';
+  tokenType?: GitHubTokenType;
   baseURL?: string;
 }
 
@@ -408,7 +409,7 @@ export class GitHubApiServiceClass {
    */
   async fetchUser(
     token: string,
-    tokenType: 'classic' | 'fine-grained' = 'classic',
+    tokenType: GitHubTokenType = 'classic',
   ): Promise<{ user: GitHubUserResponse; rateLimit: any }> {
     this.configure({ token, tokenType });
 
@@ -423,7 +424,7 @@ export class GitHubApiServiceClass {
   /**
    * Fetch comprehensive GitHub stats for authenticated user
    */
-  async fetchStats(token: string, tokenType: 'classic' | 'fine-grained' = 'classic'): Promise<GitHubStats> {
+  async fetchStats(token: string, tokenType: GitHubTokenType = 'classic'): Promise<GitHubStats> {
     this.configure({ token, tokenType });
 
     const user = await this.getAuthenticatedUser();

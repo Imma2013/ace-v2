@@ -196,3 +196,5 @@ export const loader = withSecurity(githubStatsLoader, {
   rateLimit: true,
   allowedMethods: ['GET'],
 });
+
+

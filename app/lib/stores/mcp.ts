@@ -3,6 +3,7 @@ import type { MCPConfig, MCPServerTools } from '~/lib/services/mcpService';
 
 const MCP_SETTINGS_KEY = 'mcp_settings';
 const isBrowser = typeof window !== 'undefined';
+const isHostedVercel = isBrowser && window.location.hostname.endsWith('vercel.app');
 
 type MCPSettings = {
   mcpConfig: MCPConfig;
@@ -38,6 +39,11 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
   isUpdatingConfig: false,
   initialize: async () => {
     if (get().isInitialized) {
+      return;
+    }
+
+    if (isHostedVercel) {
+      set(() => ({ isInitialized: true, serverTools: {}, error: null }));
       return;
     }
 
@@ -84,6 +90,11 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
     }
   },
   checkServersAvailabilities: async () => {
+    if (isHostedVercel) {
+      set(() => ({ serverTools: {}, error: null }));
+      return;
+    }
+
     const response = await fetch('/api/mcp-check', {
       method: 'GET',
     });
@@ -99,6 +110,10 @@ export const useMCPStore = create<Store & Actions>((set, get) => ({
 }));
 
 async function updateServerConfig(config: MCPConfig) {
+  if (isHostedVercel) {
+    return {};
+  }
+
   const response = await fetch('/api/mcp-update-config', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

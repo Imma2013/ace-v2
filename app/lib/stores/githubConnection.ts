@@ -3,7 +3,7 @@ import Cookies from 'js-cookie';
 import { logStore } from '~/lib/stores/logs';
 import { gitHubApiService } from '~/lib/services/githubApiService';
 import { calculateStatsSummary } from '~/utils/githubStats';
-import type { GitHubConnection } from '~/types/GitHub';
+import type { GitHubConnection, GitHubTokenType } from '~/types/GitHub';
 
 // Auto-connect using environment variable
 const envToken = import.meta.env?.VITE_GITHUB_ACCESS_TOKEN;
@@ -14,8 +14,9 @@ const githubConnectionAtom = atom<GitHubConnection>({
   token: envToken || '',
   tokenType:
     envTokenType === 'classic' || envTokenType === 'fine-grained'
-      ? (envTokenType as 'classic' | 'fine-grained')
+      ? (envTokenType as GitHubTokenType)
       : 'classic',
+  authMethod: envToken ? 'token' : 'server',
 });
 
 // Initialize connection from localStorage on startup
@@ -69,7 +70,7 @@ export const githubConnectionStore = {
   get: () => githubConnectionAtom.get(),
 
   // Connect to GitHub
-  async connect(token: string, tokenType: 'classic' | 'fine-grained' = 'classic'): Promise<void> {
+  async connect(token: string, tokenType: GitHubTokenType = 'classic'): Promise<void> {
     if (isGitHubConnecting.get()) {
       throw new Error('Connection already in progress');
     }
@@ -85,6 +86,7 @@ export const githubConnectionStore = {
         user,
         token,
         tokenType,
+        authMethod: 'token',
         rateLimit,
       };
 
@@ -198,7 +200,7 @@ export const githubConnectionStore = {
   },
 
   // Update token type
-  updateTokenType(tokenType: 'classic' | 'fine-grained'): void {
+  updateTokenType(tokenType: GitHubTokenType): void {
     const connection = githubConnectionAtom.get();
     const updatedConnection = {
       ...connection,

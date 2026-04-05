@@ -128,8 +128,8 @@ export default function GitHubTab() {
           <h2 className="text-lg font-medium text-bolt-elements-textPrimary">GitHub Integration</h2>
         </div>
         <p className="text-sm text-bolt-elements-textSecondary">
-          Connect your GitHub account to enable advanced repository management features, statistics, and seamless
-          integration.
+          Connect your GitHub account with device login or a personal access token to enable repository browsing,
+          statistics, and deployment workflows.
         </p>
         <GitHubConnection connectionTest={connectionTest} onTestConnection={handleTestConnection} />
       </div>
@@ -165,7 +165,7 @@ export default function GitHubTab() {
         </motion.div>
 
         <p className="text-sm text-bolt-elements-textSecondary dark:text-bolt-elements-textSecondary">
-          Manage your GitHub integration with advanced repository features and comprehensive statistics
+          Manage your GitHub connection, repository features, and account statistics
         </p>
 
         {/* Connection Test Results */}

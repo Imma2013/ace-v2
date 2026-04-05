@@ -1,10 +1,16 @@
 import { useStore } from '@nanostores/react';
+import { lazy, Suspense } from 'react';
 import { ClientOnly } from 'remix-utils/client-only';
 import { chatStore } from '~/lib/stores/chat';
 import { classNames } from '~/utils/classNames';
-import { HeaderActionButtons } from './HeaderActionButtons.client';
-import { ChatDescription } from '~/lib/persistence/ChatDescription.client';
 import { currentApp } from '~/lib/stores/apps';
+
+const HeaderActionButtons = lazy(() =>
+  import('./HeaderActionButtons.client').then((module) => ({ default: module.HeaderActionButtons })),
+);
+const ChatDescription = lazy(() =>
+  import('~/lib/persistence/ChatDescription.client').then((module) => ({ default: module.ChatDescription })),
+);
 
 export function Header() {
   const chat = useStore(chatStore);
@@ -38,13 +44,15 @@ export function Header() {
               </div>
             )}
             <span className="truncate block">
-              <ClientOnly>{() => <ChatDescription />}</ClientOnly>
+              <ClientOnly>{() => <Suspense fallback={null}><ChatDescription /></Suspense>}</ClientOnly>
             </span>
           </div>
           <ClientOnly>
             {() => (
               <div className="">
-                <HeaderActionButtons chatStarted={chat.started} />
+                <Suspense fallback={null}>
+                  <HeaderActionButtons chatStarted={chat.started} />
+                </Suspense>
               </div>
             )}
           </ClientOnly>

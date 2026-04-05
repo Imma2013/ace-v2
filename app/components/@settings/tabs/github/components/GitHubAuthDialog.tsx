@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion } from 'framer-motion';
 import { classNames } from '~/utils/classNames';
@@ -11,9 +11,20 @@ interface GitHubAuthDialogProps {
 }
 
 export function GitHubAuthDialog({ isOpen, onClose, onSuccess }: GitHubAuthDialogProps) {
-  const { connect, isConnecting, error } = useGitHubConnection();
+  const { connect, startDeviceFlow, cancelDeviceFlow, connection, deviceFlow, isConnecting, error } =
+    useGitHubConnection();
+  const [copied, setCopied] = useState(false);
   const [token, setToken] = useState('');
   const [tokenType, setTokenType] = useState<'classic' | 'fine-grained'>('classic');
+
+  useEffect(() => {
+    if (!isOpen || !connection?.user) {
+      return;
+    }
+
+    onSuccess?.();
+    onClose();
+  }, [connection?.user, isOpen, onClose, onSuccess]);
 
   const handleConnect = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,16 +35,31 @@ export function GitHubAuthDialog({ isOpen, onClose, onSuccess }: GitHubAuthDialo
 
     try {
       await connect(token, tokenType);
-      setToken(''); // Clear token on successful connection
+      setToken('');
       onSuccess?.();
       onClose();
     } catch {
-      // Error handling is done in the hook
+      // Hook handles the error state.
+    }
+  };
+
+  const handleCopyCode = async () => {
+    if (!deviceFlow?.userCode) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(deviceFlow.userCode);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch (copyError) {
+      console.error('Failed to copy GitHub device code:', copyError);
     }
   };
 
   const handleClose = () => {
     setToken('');
+    cancelDeviceFlow();
     onClose();
   };
 
@@ -63,10 +89,95 @@ export function GitHubAuthDialog({ isOpen, onClose, onSuccess }: GitHubAuthDialo
                 </button>
               </div>
 
+              <div className="rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-background-depth-1 p-4 space-y-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-bolt-elements-textPrimary">Device code login</p>
+                  <p className="text-xs text-bolt-elements-textSecondary">
+                    Recommended for account sign-in. GitHub will give you a short code to approve in the browser.
+                  </p>
+                </div>
+
+                {!deviceFlow ? (
+                  <button
+                    type="button"
+                    onClick={() => void startDeviceFlow()}
+                    disabled={isConnecting}
+                    className={classNames(
+                      'px-4 py-2 rounded-lg text-sm flex items-center gap-2',
+                      'bg-[#303030] text-white',
+                      'hover:bg-[#5E41D0] hover:text-white',
+                      'disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200',
+                    )}
+                  >
+                    {isConnecting ? (
+                      <>
+                        <div className="i-ph:spinner-gap animate-spin" />
+                        Starting...
+                      </>
+                    ) : (
+                      <>
+                        <div className="i-ph:device-mobile-camera w-4 h-4" />
+                        Connect with GitHub
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.2em] text-bolt-elements-textSecondary">Your code</p>
+                      <div className="mt-2 rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-background px-4 py-3 font-mono text-xl tracking-[0.3em] text-bolt-elements-textPrimary">
+                        {deviceFlow.userCode}
+                      </div>
+                    </div>
+                    <p className="text-sm text-bolt-elements-textSecondary">
+                      Open{' '}
+                      <a
+                        href={deviceFlow.verificationUriComplete || deviceFlow.verificationUri}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-bolt-elements-borderColorActive hover:underline"
+                      >
+                        {deviceFlow.verificationUri}
+                      </a>{' '}
+                      and enter the code above.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            deviceFlow.verificationUriComplete || deviceFlow.verificationUri,
+                            '_blank',
+                            'noopener,noreferrer',
+                          )
+                        }
+                        className="px-3 py-2 rounded-lg text-sm bg-[#303030] text-white hover:bg-[#5E41D0]"
+                      >
+                        Open GitHub
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCopyCode}
+                        className="px-3 py-2 rounded-lg text-sm border border-bolt-elements-borderColor text-bolt-elements-textPrimary"
+                      >
+                        {copied ? 'Copied' : 'Copy code'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelDeviceFlow}
+                        className="px-3 py-2 rounded-lg text-sm border border-bolt-elements-borderColor text-bolt-elements-textPrimary"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="text-xs text-bolt-elements-textSecondary bg-bolt-elements-background-depth-1 p-3 rounded-lg">
                 <p className="flex items-center gap-1 mb-1">
                   <span className="i-ph:lightbulb w-3.5 h-3.5 text-bolt-elements-icon-success" />
-                  <span className="font-medium">Tip:</span> You need a GitHub token to deploy repositories.
+                  <span className="font-medium">Manual fallback:</span> You can still paste a token if you prefer.
                 </p>
                 <p>Required scopes: repo, read:org, read:user</p>
               </div>
@@ -157,8 +268,8 @@ export function GitHubAuthDialog({ isOpen, onClose, onSuccess }: GitHubAuthDialo
                       </>
                     ) : (
                       <>
-                        <div className="i-ph:plug-charging w-4 h-4" />
-                        Connect
+                        <div className="i-ph:key w-4 h-4" />
+                        Connect with token
                       </>
                     )}
                   </button>

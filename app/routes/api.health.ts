@@ -6,3 +6,5 @@ export const loader = async ({ request: _request }: LoaderFunctionArgs) => {
     timestamp: new Date().toISOString(),
   });
 };
+
+

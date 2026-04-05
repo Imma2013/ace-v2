@@ -4,6 +4,12 @@ import type { IProviderSetting } from '~/types/model';
 import type { LanguageModelV1 } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 
+const GOOGLE_MODEL_ALIASES: Record<string, string> = {
+  'gemini-3.1-pro-preview': 'gemini-2.5-pro',
+  'gemini-3-flash-preview': 'gemini-2.5-flash',
+  'gemini-flash-latest': 'gemini-2.5-flash',
+};
+
 export default class GoogleProvider extends BaseProvider {
   name = 'Google';
   getApiKeyLink = 'https://aistudio.google.com/app/apikey';
@@ -156,6 +162,6 @@ export default class GoogleProvider extends BaseProvider {
       apiKey,
     });
 
-    return google(model);
+    return google(GOOGLE_MODEL_ALIASES[model] || model);
   }
 }

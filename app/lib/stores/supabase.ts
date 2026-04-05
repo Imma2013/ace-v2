@@ -57,6 +57,10 @@ const storage =
   typeof globalThis.localStorage.getItem === 'function'
     ? globalThis.localStorage
     : null;
+const isHostedVercel =
+  typeof globalThis !== 'undefined' &&
+  typeof globalThis.location !== 'undefined' &&
+  globalThis.location.hostname.endsWith('vercel.app');
 
 const savedConnection = storage ? storage.getItem('supabase_connection') : null;
 const savedCredentials = storage ? storage.getItem('supabaseCredentials') : null;
@@ -86,7 +90,7 @@ export const isConnecting = atom(false);
 export const isFetchingStats = atom(false);
 export const isFetchingApiKeys = atom(false);
 
-if (initialState.token && !initialState.stats) {
+if (!isHostedVercel && initialState.token && !initialState.stats) {
   fetchSupabaseStats(initialState.token).catch(console.error);
 }
 
@@ -154,6 +158,14 @@ export function initializeSupabaseConnection() {
 }
 
 export async function fetchSupabaseStats(token: string) {
+  if (isHostedVercel) {
+    updateSupabaseConnection({
+      user: null,
+      stats: undefined,
+    });
+    return;
+  }
+
   isFetchingStats.set(true);
 
   try {
@@ -187,6 +199,10 @@ export async function fetchSupabaseStats(token: string) {
 }
 
 export async function fetchProjectApiKeys(projectId: string, token: string) {
+  if (isHostedVercel) {
+    return null;
+  }
+
   isFetchingApiKeys.set(true);
 
   try {

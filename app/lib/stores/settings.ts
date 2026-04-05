@@ -56,6 +56,7 @@ const AUTO_ENABLED_KEY = 'auto_enabled_providers';
 
 // Add this helper function at the top of the file
 const isBrowser = typeof window !== 'undefined';
+const isHostedVercel = isBrowser && window.location.hostname.endsWith('vercel.app');
 
 // Interface for configured provider info from server
 interface ConfiguredProvider {
@@ -66,6 +67,10 @@ interface ConfiguredProvider {
 
 // Fetch configured providers from server
 const fetchConfiguredProviders = async (): Promise<ConfiguredProvider[]> => {
+  if (isHostedVercel) {
+    return [];
+  }
+
   try {
     const response = await fetch('/api/configured-providers');
 
@@ -120,7 +125,7 @@ const getInitialProviderSettings = (): ProviderSetting => {
 
 // Auto-enable providers that are configured on the server
 const autoEnableConfiguredProviders = async () => {
-  if (!isBrowser) {
+  if (!isBrowser || isHostedVercel) {
     return;
   }
 

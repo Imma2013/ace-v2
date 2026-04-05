@@ -94,10 +94,10 @@ export const selectStarterTemplate = async (options: { message: string; model: s
     method: 'POST',
     body: JSON.stringify(requestBody),
   });
-  const respJson: { text: string } = await response.json();
+  const respJson: { text?: string } = await response.json();
   console.log(respJson);
 
-  const { text } = respJson;
+  const text = typeof respJson?.text === 'string' ? respJson.text : '';
   const selectedTemplate = parseSelectedTemplate(text);
 
   if (selectedTemplate) {

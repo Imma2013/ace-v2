@@ -1,5 +1,4 @@
 import { atom } from 'nanostores';
-import { logStore } from './logs';
 
 export type Theme = 'dark' | 'light';
 
@@ -50,5 +49,11 @@ export function toggleTheme() {
     console.error('Error updating user profile theme:', error);
   }
 
-  logStore.logSystem(`Theme changed to ${newTheme} mode`);
+  import('./logs')
+    .then(({ logStore }) => {
+      logStore.logSystem(`Theme changed to ${newTheme} mode`);
+    })
+    .catch(() => {
+      // No-op if client logging is unavailable.
+    });
 }

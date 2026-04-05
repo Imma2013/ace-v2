@@ -1,10 +1,14 @@
 import { createScopedLogger } from '~/utils/logger';
-import { MCPService } from '~/lib/services/mcpService';
 
 const logger = createScopedLogger('api.mcp-check');
 
 export async function loader() {
   try {
+    if (process.env.VERCEL) {
+      return Response.json({});
+    }
+
+    const { MCPService } = await import('~/lib/services/mcpService');
     const mcpService = MCPService.getInstance();
     const serverTools = await mcpService.checkServersAvailabilities();
 
