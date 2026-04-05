@@ -7,7 +7,7 @@ import { GitHubRepositoryCard } from './GitHubRepositoryCard';
 import type { GitHubRepoInfo } from '~/types/GitHub';
 import { useGitHubConnection, useGitHubStats } from '~/lib/hooks';
 import { classNames } from '~/utils/classNames';
-import { Search, RefreshCw, GitBranch, Calendar, Filter, Link as LinkIcon, Github, Clipboard, Check } from 'lucide-react';
+import { Search, RefreshCw, GitBranch, Calendar, Filter, Link as LinkIcon, Github } from 'lucide-react';
 
 interface GitHubRepositorySelectorProps {
   onClone?: (repoUrl: string, branch?: string) => void;
@@ -33,9 +33,7 @@ const extractGitHubRepoNameFromUrl = (url: string): string | null => {
 };
 
 export function GitHubRepositorySelector({ onClone, className }: GitHubRepositorySelectorProps) {
-  const { connection, isConnected, isConnecting: isDeviceConnecting, startDeviceFlow, deviceFlow, cancelDeviceFlow } =
-    useGitHubConnection();
-  const [codeCopied, setCodeCopied] = useState(false);
+  const { connection, isConnected, startWebOAuth, error: connectionError } = useGitHubConnection();
   const wasDisconnectedRef = useRef(!isConnected);
   const {
     stats,
@@ -243,110 +241,20 @@ export function GitHubRepositorySelector({ onClone, className }: GitHubRepositor
       </div>
 
       {!isConnected || !connection ? (
-        <div className="rounded-xl border border-dashed border-bolt-elements-borderColor p-6 space-y-4">
-          {!deviceFlow ? (
-            <div className="text-center space-y-4">
-              <Github className="w-12 h-12 text-bolt-elements-textTertiary mx-auto" />
-              <p className="text-bolt-elements-textSecondary">
-                Connect your GitHub account to browse and import your repositories.
-              </p>
-              <Button
-                onClick={() => void startDeviceFlow()}
-                disabled={isDeviceConnecting}
-                className="gap-2"
-              >
-                {isDeviceConnecting ? (
-                  <>
-                    <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
-                    Starting...
-                  </>
-                ) : (
-                  <>
-                    <Github className="w-4 h-4" />
-                    Connect with GitHub
-                  </>
-                )}
-              </Button>
-              <p className="text-xs text-bolt-elements-textTertiary">
-                Uses GitHub device flow. Requires <code className="px-1 py-0.5 rounded bg-bolt-elements-background-depth-3 text-xs">GITHUB_CLIENT_ID</code> in your environment.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-center">
-                <p className="text-sm font-medium text-bolt-elements-textPrimary mb-1">Enter this code on GitHub</p>
-                <div className="inline-flex items-center gap-2 rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-background-depth-3 px-4 py-3">
-                  <span className="font-mono text-xl tracking-[0.3em] text-bolt-elements-textPrimary">
-                    {deviceFlow.userCode}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(deviceFlow.userCode).then(() => {
-                        setCodeCopied(true);
-                        setTimeout(() => setCodeCopied(false), 2000);
-                      });
-                    }}
-                    className="p-1 rounded hover:bg-bolt-elements-background-depth-1 transition-colors"
-                    title="Copy code"
-                  >
-                    {codeCopied ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Clipboard className="w-4 h-4 text-bolt-elements-textSecondary" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-bolt-elements-borderColor bg-bolt-elements-background-depth-1 p-3 text-sm text-bolt-elements-textSecondary space-y-1">
-                <p>{deviceFlow.message || 'Approve this login on GitHub to finish connecting.'}</p>
-                <p>
-                  Visit{' '}
-                  <a
-                    href={deviceFlow.verificationUriComplete || deviceFlow.verificationUri}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-bolt-elements-borderColorActive hover:underline"
-                  >
-                    {deviceFlow.verificationUri}
-                  </a>{' '}
-                  and enter the code above.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-center gap-3">
-                <Button
-                  onClick={() =>
-                    window.open(
-                      deviceFlow.verificationUriComplete || deviceFlow.verificationUri,
-                      '_blank',
-                      'noopener,noreferrer',
-                    )
-                  }
-                >
-                  Open GitHub
-                </Button>
-                <Button variant="outline" onClick={cancelDeviceFlow}>
-                  Cancel
-                </Button>
-              </div>
-
-              {deviceFlow.status === 'pending' && (
-                <p className="text-center text-xs text-bolt-elements-textTertiary">
-                  Polling GitHub every {deviceFlow.interval}s...
-                </p>
-              )}
-              {deviceFlow.status === 'error' && (
-                <div className="text-center space-y-2">
-                  <p className="text-sm text-red-500">{deviceFlow.error}</p>
-                  <Button variant="outline" size="sm" onClick={() => void startDeviceFlow()}>
-                    Try again
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+        <div className="rounded-xl border border-dashed border-bolt-elements-borderColor p-6">
+          <div className="text-center space-y-4">
+            <Github className="w-12 h-12 text-bolt-elements-textTertiary mx-auto" />
+            <p className="text-bolt-elements-textSecondary">
+              Connect your GitHub account to browse and import your repositories.
+            </p>
+            <Button onClick={startWebOAuth} className="gap-2">
+              <Github className="w-4 h-4" />
+              Connect with GitHub
+            </Button>
+            {connectionError && (
+              <p className="text-sm text-red-500">{connectionError}</p>
+            )}
+          </div>
         </div>
       ) : isStatsLoading && !stats ? (
         <div className="flex flex-col items-center justify-center p-8 space-y-4">

@@ -18,6 +18,7 @@ export interface ConnectionState {
 
 export interface UseGitHubConnectionReturn extends ConnectionState {
   connect: (token: string, tokenType: GitHubTokenType) => Promise<void>;
+  startWebOAuth: () => void;
   startDeviceFlow: () => Promise<void>;
   cancelDeviceFlow: () => void;
   disconnect: () => void;
@@ -27,6 +28,7 @@ export interface UseGitHubConnectionReturn extends ConnectionState {
 
 const STORAGE_KEY = 'github_connection';
 const DEVICE_FLOW_URL = '/api/github-device';
+const WEB_OAUTH_LOGIN_URL = '/api/github-login';
 
 function getAuthorizationHeader(token: string, tokenType: GitHubTokenType) {
   return `${tokenType === 'classic' ? 'token' : 'Bearer'} ${token}`;
@@ -44,6 +46,37 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
   useEffect(() => {
     loadSavedConnection();
   }, []);
+
+  // Detect OAuth callback: pick up temporary token cookie set by /api/github-callback
+  useEffect(() => {
+    const oauthToken = Cookies.get('github_oauth_token');
+
+    if (oauthToken) {
+      // Remove the temporary cookie immediately
+      Cookies.remove('github_oauth_token');
+
+      // Auto-connect using the token from the OAuth callback
+      void connect(oauthToken, 'oauth');
+    }
+
+    // Check for error passed via URL query param
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const githubError = params.get('github_error');
+
+      if (githubError) {
+        setError(decodeURIComponent(githubError));
+        toast.error(decodeURIComponent(githubError));
+
+        // Clean the URL
+        params.delete('github_error');
+        const cleanUrl = params.toString()
+          ? `${window.location.pathname}?${params.toString()}`
+          : window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+      }
+    }
+  }, []); // Run once on mount
 
   useEffect(() => {
     if (!deviceFlow || deviceFlow.status !== 'pending') {
@@ -326,6 +359,10 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
     setError(null);
   }, []);
 
+  const startWebOAuth = useCallback(() => {
+    window.location.href = WEB_OAUTH_LOGIN_URL;
+  }, []);
+
   const disconnect = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     Cookies.remove('githubToken');
@@ -398,6 +435,7 @@ export function useGitHubConnection(): UseGitHubConnectionReturn {
     isServerSide: !!connection?.user && !connection?.token,
     deviceFlow,
     connect,
+    startWebOAuth,
     startDeviceFlow,
     cancelDeviceFlow,
     disconnect,

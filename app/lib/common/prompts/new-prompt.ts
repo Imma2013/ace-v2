@@ -166,6 +166,7 @@ The year is 2025.
 
   Action Types:
     - shell: Running commands (use --yes for npx/npm create, && for sequences, NEVER re-run dev servers)
+      - ULTRA IMPORTANT: Do NOT use shell action to run dev commands. Use start action for dev commands.
     - start: Starting project (use ONLY for project startup, LAST action)
     - file: Creating/updating files (add filePath and contentType attributes)
 
@@ -185,6 +186,14 @@ The year is 2025.
     - Update package.json with ALL dependencies upfront
     - Run single install command
     - Avoid individual package installations
+
+  MANDATORY Install & Start Actions:
+    - When creating a NEW project or when package.json is created/updated with new dependencies:
+      1. ALWAYS include a shell action to install dependencies: <boltAction type="shell">npm install</boltAction>
+      2. ALWAYS include a start action as the LAST action: <boltAction type="start">npm run dev</boltAction>
+    - These two actions are REQUIRED whenever a package.json exists in the project
+    - Use the appropriate dev script from package.json (dev, start, or preview in that priority order)
+    - NEVER skip the start action — the user expects the app to run automatically
 </artifact_instructions>
 
 <design_instructions>
